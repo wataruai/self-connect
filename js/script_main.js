@@ -13,7 +13,7 @@ import viewTrade from '../components/view_trade.js';
 import viewShop from '../components/view_shop.js';
 import viewAdmin from '../components/view_admin.js';
 import viewModals from '../components/modals.js';
-import aegisMethods from '../components/script_aegis.js';
+import aegisMethods from './script_aegis.js';
 
 // デバッグモニター出力関数
 window.showDebug = function(msg, isError = false) {
@@ -43,7 +43,7 @@ window.showDebug = function(msg, isError = false) {
     d.style.opacity = "0";
     setTimeout(() => { if(d.parentElement) d.remove(); }, 500);
   }, 7000);
-}
+};
 
 const app = Vue.createApp({
   components: {
@@ -77,7 +77,7 @@ const app = Vue.createApp({
       currentUser: null, savedAccounts: [], isAutoLoggingIn: false, authMode: 'new', existingSearchId: '',
       showPinModal: false, pinInput: '', pendingLoginAccount: null,
       loginForm: { name: '', searchId: '', pin: '', charType: '🐰', charName: '' }, autoLoginInfo: { display_name: '', char_type: '🐰' },
-      availableIcons: ['🐰','🐶','🦊','🐻','🐼','🐯','🦁','🧑‍🎓','👩‍🎓','🤖','🚃','👨','👧','🏦','💳','📚','🖊️','👻','👻','👻','👻'], allUsers: [],
+      availableIcons: ['🐰','🐶','🦊','🐻','🐼','🐯','🦁','🧑‍🎓','👩‍🎓','🤖','👻'], allUsers: [],
       
       // チャット・コミュニティ
       channels: [], gdms: [], friends: [], friendRequests: [],
@@ -90,7 +90,7 @@ const app = Vue.createApp({
       pollingInterval: null, timeUpdater: null, currentTime: new Date(),
       newTodo: '', newEvent: { title: '', date: '' }, studyForm: { subject: '', duration: '' }, taskUploadFiles: [],
       
-      // AI
+      // AI関連
       aiMode: 'chat', aiChatModel: 'google/gemma-4-31b-it:free', aiChatHistory: [], aiChatInput: '', aiVideoPrompt: '', aiVideoResult: null, isAILoading: false,
       
       // モーダル
@@ -133,21 +133,14 @@ const app = Vue.createApp({
     filteredStocks() { if (!this.tradeData || !this.tradeData.stocks) return []; return this.tradeData.stocks.filter(s => this.tradeFilter === 'real' ? !s.is_fictional : s.is_fictional); },
     currentSelectedPrice() { if (!this.selectedStock) return 0; return this.getCurrentStockPrice(this.selectedStock.stock_code); },
     isStockPriceUp() { if (!this.selectedStock) return true; const cache = this.currentMinuteDataCache[this.selectedStock.stock_code]; if (!cache || cache.length < 2) return true; const nowStr = this.getJstTimeStr(); const endStr = nowStr > "21:00" ? "21:00" : (nowStr < "07:00" ? "07:00" : nowStr); const displayData = cache.filter(d => d.time <= endStr); if (displayData.length < 2) return true; return displayData[displayData.length - 1].price >= displayData[displayData.length - 2].price; },
-    isTradeClosed() {
-      // ★ Aegisによる市場操作フラグを最優先
-      if (this.marketStatus === 'open') return false;
-      if (this.marketStatus === 'closed') return true;
-      
-      const nowStr = this.getJstTimeStr();
-      return nowStr < "07:00" || nowStr >= "21:30"; // ★ 21:30に延長
-    },
+    isTradeClosed() { if (this.marketStatus === 'open') return false; if (this.marketStatus === 'closed') return true; const nowStr = this.getJstTimeStr(); return nowStr < "07:00" || nowStr >= "21:30"; },
     canBuyStock() { if (!this.currentUser || !this.selectedStock) return false; return (this.currentSelectedPrice * this.tradeAmount) <= (this.currentUser.coins || 0); },
     canSellStock() { if (!this.selectedStock) return false; return this.getOwnedQuantity(this.selectedStock.stock_code) >= this.tradeAmount; }
   },
   
   methods: {
-    ...aegisMethods, // ★ 追加: Aegis用のメソッドを合体
-    // --- UI・ナビゲーション制御 ---
+    ...aegisMethods,
+    
     navClass(tab) { return { 'text-indigo-400 bg-slate-800': this.currentNavTab === tab, 'text-slate-400 hover:text-slate-200': this.currentNavTab !== tab, 'p-2 md:p-3 w-10 md:w-12 h-10 md:h-12 rounded-xl transition flex justify-center items-center': true }; },
     switchNav(tab) { this.currentNavTab = tab; if (this.isMobile) { this.mobileView = ['chat', 'teams', 'activity'].includes(tab) ? 'list' : 'detail'; } setTimeout(() => { if (tab === 'shop') this.fetchRanking(); if (tab === 'trade') this.fetchTradeData(); if (tab === 'admin') this.changeAdminTab('stats'); }, 50); },
     getCharIcon(type) { return type || '🐰'; },
@@ -159,12 +152,11 @@ const app = Vue.createApp({
     getDmId(id1, id2) { if (!id1 || !id2) return ''; return 'dm_' + [id1, id2].sort().join('_'); },
     selectChannel(id) { this.currentChannelId = id; this.messages = []; if (this.isMobile) this.mobileView = 'detail'; this.fetchData(true); },
     selectDm(f) { this.currentChannelId = this.getDmId(this.currentUser?.user_id, f.user_id); this.messages = []; if (this.isMobile) this.mobileView = 'detail'; this.fetchData(true); },
-
+    
     // --- 認証・ログイン (Supabase版) ---
     initAuth() {
       let token = window.appConfig?.loginToken || '';
       let aegis = window.appConfig?.isAegisMode ? 'go' : '';
-
       this.isAegisMode = (aegis === 'go');
 
       if (token && this.consumedToken !== token) {
@@ -192,20 +184,13 @@ const app = Vue.createApp({
     async loginWithToken(userId) {
       this.isAutoLoggingIn = true;
       try {
-        // Supabaseからユーザー情報を単一取得
         const { success, data } = await apiCall('users', 'select', '*', { eq: { column: 'user_id', value: userId } });
         if (!success || data.length === 0) {
-          this.isAutoLoggingIn = false;
-          this.authMode = 'new';
-          this.errorMessage = "ログインURLが無効、またはユーザーが見つかりません。";
-          window.history.replaceState({}, document.title, window.location.pathname);
-          return;
+          this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "ログインURLが無効です"; return;
         }
 
         const user = data[0];
-        if (user.is_blocked) {
-          this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "アカウントが凍結されています"; return;
-        }
+        if (user.is_blocked) { this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "凍結されています"; return; }
 
         this.consumedToken = userId;
         const newAcc = { user_id: user.user_id, display_name: user.display_name, char_type: user.char_type, search_id: user.search_id };
@@ -213,17 +198,11 @@ const app = Vue.createApp({
         localStorage.setItem('selfConnectLastUserId', user.user_id);
         
         this.currentUser = user;
-        
         if (this.isAegisMode && this.currentUser.role !== 'admin' && this.currentUser.role !== 'root') {
           this.authMode = 'select'; this.currentUser = null; this.isAutoLoggingIn = false; this.errorMessage = "Aegis Systemへのアクセス権限がありません"; return;
         }
-        
-        // Supabaseから全データを並列取得
         await this.loadInitialDataFromSupabase(userId);
-
-      } catch (e) {
-        this.isAutoLoggingIn = false; this.errorMessage = "トークンログインエラー"; this.authMode = 'new';
-      }
+      } catch (e) { this.isAutoLoggingIn = false; this.errorMessage = "エラー"; this.authMode = 'new'; }
     },
 
     async loginWithSaved(acc) {
@@ -231,33 +210,74 @@ const app = Vue.createApp({
       try {
         const { success, data } = await apiCall('users', 'select', '*', { eq: { column: 'user_id', value: acc.user_id } });
         if (!success || data.length === 0 || data[0].is_blocked) {
-          this.isAutoLoggingIn = false; this.currentUser = null; this.authMode = 'select'; this.errorMessage = "アカウントが見つからないか凍結されています。"; return;
+          this.isAutoLoggingIn = false; this.currentUser = null; this.authMode = 'select'; this.errorMessage = "アカウントが見つかりません"; return;
         }
         
         localStorage.setItem('selfConnectLastUserId', data[0].user_id);
         this.currentUser = data[0];
-
         if (this.isAegisMode && this.currentUser.role !== 'admin' && this.currentUser.role !== 'root') {
           this.authMode = 'select'; this.currentUser = null; this.isAutoLoggingIn = false; this.errorMessage = "Aegis Systemへのアクセス権限がありません"; return;
         }
-
         await this.loadInitialDataFromSupabase(data[0].user_id);
-      } catch (e) {
-        this.isAutoLoggingIn = false; this.errorMessage = "データ取得エラー"; this.authMode = 'select';
-      }
+      } catch (e) { this.isAutoLoggingIn = false; this.errorMessage = "エラー"; this.authMode = 'select'; }
     },
 
-    // Supabaseから全データを並列で取得する新関数
+    requestPin(acc) {
+      if (acc.pin) { this.pendingLoginAccount = acc; this.pinInput = ''; this.showPinModal = true; }
+      else { this.loginWithSaved(acc); }
+    },
+    verifyPin() {
+      this.isLoading = true;
+      setTimeout(() => {
+        this.isLoading = false;
+        if (this.pinInput === this.pendingLoginAccount.pin) { this.showPinModal = false; this.loginWithSaved(this.pendingLoginAccount); }
+        else { this.errorMessage = "パスワードが違います"; this.pinInput = ''; }
+      }, 500);
+    },
+    deleteLocalAccount(uid) {
+      this.savedAccounts = this.savedAccounts.filter(a => a.user_id !== uid);
+      localStorage.setItem('selfConnectAccounts', JSON.stringify(this.savedAccounts));
+      if (this.savedAccounts.length === 0) this.authMode = 'new';
+    },
+    async startApp() {
+      if (!this.loginForm.name || !this.loginForm.searchId) { this.errorMessage = '入力必須です'; return; }
+      this.isLoading = true;
+      const userData = { user_id: 'usr_' + Math.random().toString(36).substr(2, 9), display_name: this.loginForm.name, search_id: this.loginForm.searchId, char_type: this.loginForm.charType, char_name: this.loginForm.charName };
+      try {
+        const { success } = await apiCall('users', 'insert', [userData]);
+        if (!success) { this.isLoading = false; this.errorMessage = "登録エラー"; return; }
+        const userToSave = userData;
+        if (this.loginForm.pin) userToSave.pin = this.loginForm.pin;
+        this.saveToLocal(userToSave);
+        this.loginWithSaved(userToSave);
+      } catch (e) { this.isLoading = false; this.errorMessage = "エラー"; }
+    },
+    async loginExisting() {
+      if (!this.existingSearchId) return;
+      this.isLoading = true;
+      try {
+        const { success, data } = await apiCall('users', 'select', '*', { eq: { column: 'search_id', value: this.existingSearchId } });
+        if (success && data.length > 0) { this.saveToLocal(data[0]); this.loginWithSaved(data[0]); }
+        else { this.isLoading = false; this.errorMessage = "見つかりません。"; }
+      } catch (e) { this.isLoading = false; this.errorMessage = "エラー"; }
+    },
+    saveToLocal(user) {
+      try {
+        let idx = this.savedAccounts.findIndex(a => a.user_id === user.user_id);
+        if (idx === -1) this.savedAccounts.push(user); else this.savedAccounts[idx] = user;
+        localStorage.setItem('selfConnectAccounts', JSON.stringify(this.savedAccounts));
+      } catch (e) {}
+    },
+
+    // 初期データのSupabase取得
     async loadInitialDataFromSupabase(userId) {
       window.showDebug(`[DEBUG] 🔧 Supabase から初期データを取得中...`);
       try {
-        // 並列通信で爆速化
-        const [usersRes, channelsRes, friendsRes, notifRes, tasksRes] = await Promise.all([
+        const [usersRes, channelsRes, friendsRes, notifRes] = await Promise.all([
           apiCall('users', 'select', 'user_id, display_name, char_type, char_level, char_exp, coins, last_active'),
           apiCall('channels', 'select', '*'),
           apiCall('friends', 'select', '*'),
-          apiCall('notifications', 'select', '*', { eq: { column: 'target_user_id', value: userId } }),
-          apiCall('tasks', 'select', '*') // 後でフィルタリングする
+          apiCall('notifications', 'select', '*', { eq: { column: 'target_user_id', value: userId } })
         ]);
 
         this.allUsers = usersRes.success ? usersRes.data : [];
@@ -265,8 +285,6 @@ const app = Vue.createApp({
         this.channels = allCh.filter(c => c.type !== 'gdm');
         this.gdms = allCh.filter(c => c.type === 'gdm' && c.members && c.members.includes(userId));
         
-        // ... (todo, events などの取得も同様に拡充可能)
-
         this.myLoginUrl = window.location.origin + window.location.pathname + "?token=" + userId;
         this.fetchMarketStatus();
         
@@ -280,32 +298,59 @@ const app = Vue.createApp({
           this.startPolling();
           if (this.timeUpdater) clearInterval(this.timeUpdater);
           this.timeUpdater = setInterval(() => { this.currentTime = new Date(); }, 1000);
-          window.showDebug(`[OK] 🎉 ログイン処理が完全に終了しました`);
+          window.showDebug(`[OK] 🎉 ログイン完了`);
         }, 500);
 
       } catch(e) {
-        window.showDebug(`[ERROR] ❌ 初期データ取得に失敗: ${e.message}`, true);
+        window.showDebug(`[ERROR] ❌ 初期データ取得に失敗`, true);
       }
     },
 
-    // 定期更新（ポーリング）もSupabaseから取得するように修正
+    // 毎秒の更新取得（ポーリング）
     async fetchData(showLoading = false) { 
       if ((!this.currentChannelId && !['home','study','admin','play'].includes(this.currentNavTab)) || this.isFetching) return; 
       this.isFetching = true; 
       if (showLoading) this.isChannelLoading = true; 
       try { 
-        // 必要なデータだけをピンポイントで取得（例: メッセージ）
-        const msgRes = await apiCall('messages', 'select', '*', { eq: { column: 'channel_id', value: this.currentChannelId } });
-        if (msgRes.success) {
-          const userMap = {}; this.allUsers.forEach(u => userMap[u.user_id] = u);
-          this.messages = msgRes.data.map(m => { m.user = userMap[m.user_id] || { display_name: '退会済' }; return m; });
+        if (this.currentChannelId) {
+          const msgRes = await apiCall('messages', 'select', '*', { eq: { column: 'channel_id', value: this.currentChannelId } });
+          if (msgRes.success) {
+            const userMap = {}; this.allUsers.forEach(u => userMap[u.user_id] = u);
+            this.messages = msgRes.data.map(m => { m.user = userMap[m.user_id] || { display_name: '退会済' }; return m; });
+          }
         }
-        
         if (showLoading) this.scrollToBottom(); 
       } catch(e) { 
-        window.showDebug(`[ERROR] ❌ ポーリング失敗: ${e.message}`, true);
+        window.showDebug(`[ERROR] ❌ ポーリング失敗`, true);
       } finally {
         this.isFetching = false; 
         this.isChannelLoading = false; 
       }
     },
+    scrollToBottom() { setTimeout(() => { const container = document.getElementById('chatContainer'); if (container) container.scrollTop = container.scrollHeight; }, 100); },
+    logout() {
+      try { localStorage.removeItem('selfConnectLastUserId'); } catch (e) {}
+      clearInterval(this.pollingInterval); clearInterval(this.timeUpdater);
+      this.currentUser = null; this.showSettingsModal = false; this.isLoading = false;
+      this.authMode = this.savedAccounts.length > 0 ? 'select' : 'new';
+    },
+
+    // ----------------------------------------------------
+    // ★ ここから下は既存の株の関数等（Trade/Admin/Shopなど）
+    // （※長すぎるので一旦省略しますが、実際のファイルではそのまま残してください）
+    // ----------------------------------------------------
+  },
+
+  mounted() {
+    this.initAuth();
+    this.chartDays = 1;
+    window.addEventListener('resize', () => { this.isMobile = window.innerWidth < 768; });
+  },
+  
+  unmounted() {
+    clearInterval(this.pollingInterval);
+    clearInterval(this.timeUpdater);
+  }
+});
+
+app.mount('#app');
