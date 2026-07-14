@@ -3,11 +3,16 @@ import { apiCall } from '../js/supabase_client.js';
 
 export default {
   async fetchMarketStatus() {
-    // Supabaseから市場ステータスを取得（仮に設定テーブルを用意するか、Aegis用の固定値を設定します）
-    // 今回は初期リリースとして、Aegis側のDBに直接ステータスを読み書きします
-    const res = await apiCall('system_settings', 'select', { setting_key: 'market_status' });
-    if (res.success && res.data.length > 0) {
-      this.marketStatus = res.data[0].setting_value;
+    // 一旦エラーでクラッシュしないようにtry-catchを強化し、安全に取得
+    try {
+      const res = await apiCall('system_settings', 'select', '*', { eq: { column: 'setting_key', value: 'market_status' } });
+      if (res.success && res.data && res.data.length > 0) {
+        this.marketStatus = res.data[0].setting_value;
+      } else {
+        this.marketStatus = 'auto'; // テーブルが無い場合はautoをデフォルトにする
+      }
+    } catch(e) {
+      this.marketStatus = 'auto';
     }
   },
   
@@ -15,7 +20,6 @@ export default {
     if (!confirm(`市場のステータスを「${status}」に変更しますか？`)) return;
     this.isSendingAdmin = true;
     try {
-      // SupabaseのRPC（バックエンド関数）を呼び出して市場を操作しDiscordに通知
       const res = await apiCall('rpc', 'set_market_status', { p_admin_id: this.currentUser.user_id, p_status: status });
       if (res.success) {
         this.marketStatus = status;
@@ -44,7 +48,6 @@ export default {
     
     this.isSendingAdmin = true;
     try {
-      // SupabaseのRPCを呼び出して安全に一括処理
       const res = await apiCall('rpc', 'aegis_force_stock_batch', {
         p_admin_id: this.currentUser.user_id,
         p_target_ids: this.aegisStockForm.selectedUsers,
@@ -71,7 +74,6 @@ export default {
     if (!this.aegisDiscordMessage) return;
     this.isSendingAdmin = true;
     try {
-      // GASのDiscord通知用Webhookへ中継するか、SupabaseのEdge Functionsで処理
       const payload = { message: this.aegisDiscordMessage, roleId: this.aegisDiscordRoleId, mentionEveryone: this.aegisDiscordMentionEveryone };
       const res = await apiCall('rpc', 'send_aegis_discord_alert', { p_admin_id: this.currentUser.user_id, p_payload: payload });
       if (res.success) {
