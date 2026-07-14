@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>セルフコネクト</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Supabase公式クライアント -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    // ホワイトアウト防御システム
+    window.addEventListener('error', function(e) {
+      var d = document.createElement('div');
+      d.style.cssText = "position:fixed; top:0; left:0; right:0; background:#ef4444; color:white; padding:15px; z-index:999999; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.1);";
+      d.innerHTML = "⚠️ 構文エラー発生: " + e.message + " (行: " + e.lineno + ")<br><button onclick='this.parentElement.remove()' style='margin-top:10px; padding:4px 8px; background:white; color:#ef4444; border-radius:4px; font-size:12px; cursor:pointer;'>閉じる</button>";
+      document.body.appendChild(d);
+    });
+  </script>
+</head>
+<body>
+  
+  <div id="app" v-cloak class="h-screen w-screen bg-slate-50 relative overflow-hidden flex flex-col md:flex-row">
+    <!-- 認証画面コンポーネント -->
+    <view-auth v-if="!currentUser && !isAutoLoggingIn"></view-auth>
+    
+    <!-- ログイン後のメイン画面 -->
+    <template v-if="currentUser && !isAutoLoggingIn">
+      <!-- サイドバー -->
+      <view-sidebar></view-sidebar>
+      
+      <!-- メインエリア -->
+      <div v-show="showMainArea" class="flex-1 flex flex-col w-full h-[calc(100vh-4rem)] md:h-full overflow-y-auto">
+        <view-home v-if="currentNavTab === 'home'"></view-home>
+        <view-trade v-if="currentNavTab === 'trade'"></view-trade>
+        <view-admin v-if="currentNavTab === 'admin'"></view-admin>
+        <!-- 他の画面も後ほどここに追加します -->
+      </div>
+    </template>
+    
+    <!-- モーダル類 -->
+    <view-modals></view-modals>
+  </div>
+
+  <!-- メインロジック（ESモジュールとして読み込み） -->
+  <script type="module" src="./js/script_main.js"></script>
+</body>
+</html>
