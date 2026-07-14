@@ -1,5 +1,5 @@
 // js/script_main.js
-import { supabase, apiCall } from './supabase_client.js';
+import { sbClient, apiCall } from './supabase_client.js';
 
 // 各コンポーネントの読み込み
 import viewAuth from '../components/view_auth.js';
