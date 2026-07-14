@@ -1,4 +1,5 @@
 export default {
+    template: `
 <!-- ★ チャット・コミュニティ (Chat / Teams) 画面 -->
 <div v-if="['chat', 'teams'].includes(currentNavTab)" class="flex-1 flex flex-col bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-blend-overlay relative h-full">
   
