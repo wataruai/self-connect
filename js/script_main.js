@@ -1,7 +1,6 @@
 // js/script_main.js
 import { sbClient, apiCall } from './supabase_client.js';
 
-// 各コンポーネントの読み込み
 import viewAuth from '../components/view_auth.js';
 import viewSidebar from '../components/view_sidebar.js';
 import viewHome from '../components/view_home.js';
@@ -24,27 +23,22 @@ window.showDebug = function(msg, isError = false) {
     container.style.cssText = 'position:fixed; bottom:10px; right:10px; z-index:999999; display:flex; flex-direction:column; gap:4px; max-width:80%; align-items:flex-end; pointer-events:none;';
     document.body.appendChild(container);
   }
-  
   var d = document.createElement('div');
   d.style.cssText = `background:rgba(0,0,0,0.85); color:${isError ? '#ff4444' : '#00ff00'}; padding:8px 12px; font-size:11px; border-radius:6px; font-family:monospace; word-wrap:break-word; border-left: 3px solid ${isError ? '#ff4444' : '#00ff00'}; box-shadow: 0 4px 6px rgba(0,0,0,0.3); animation: slideIn 0.2s ease-out; pointer-events:auto;`;
   d.innerHTML = msg;
   container.appendChild(d);
-  
   if (!document.getElementById('debug-styles')) {
     let style = document.createElement('style');
     style.id = 'debug-styles';
     style.innerHTML = `@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }`;
     document.head.appendChild(style);
   }
-
   setTimeout(() => {
-    d.style.transition = "opacity 0.5s ease-out";
-    d.style.opacity = "0";
+    d.style.transition = "opacity 0.5s ease-out"; d.style.opacity = "0";
     setTimeout(() => { if(d.parentElement) d.remove(); }, 500);
   }, 7000);
 };
 
-// ★ Vueの大元のデータを mixin として定義（これを各コンポーネントで共有する）
 const appMixin = {
   data() {
     return {
@@ -59,7 +53,8 @@ const appMixin = {
       
       currentUser: null, savedAccounts: [], isAutoLoggingIn: false, authMode: 'new', existingSearchId: '',
       showPinModal: false, pinInput: '', pendingLoginAccount: null,
-      loginForm: { name: '', searchId: '', pin: '', charType: '🐰', charName: '' }, autoLoginInfo: { display_name: '', char_type: '🐰' },
+      loginForm: { name: '', searchId: '', pin: '', charType: '🐰', charName: '' }, 
+      autoLoginInfo: { display_name: '', char_type: '🐰' },
       availableIcons: ['🐰','🐶','🦊','🐻','🐼','🐯','🦁','🧑‍🎓','👩‍🎓','🤖','👻'], allUsers: [],
       
       channels: [], gdms: [], friends: [], friendRequests: [],
@@ -114,9 +109,10 @@ const appMixin = {
     canBuyStock() { if (!this.currentUser || !this.selectedStock) return false; return (this.currentSelectedPrice * this.tradeAmount) <= (this.currentUser.coins || 0); },
     canSellStock() { if (!this.selectedStock) return false; return this.getOwnedQuantity(this.selectedStock.stock_code) >= this.tradeAmount; }
   },
-
+  
   methods: {
     ...aegisMethods,
+    
     navClass(tab) { return { 'text-indigo-400 bg-slate-800': this.currentNavTab === tab, 'text-slate-400 hover:text-slate-200': this.currentNavTab !== tab, 'p-2 md:p-3 w-10 md:w-12 h-10 md:h-12 rounded-xl transition flex justify-center items-center': true }; },
     switchNav(tab) { this.currentNavTab = tab; if (this.isMobile) { this.mobileView = ['chat', 'teams', 'activity'].includes(tab) ? 'list' : 'detail'; } setTimeout(() => { if (tab === 'shop') this.fetchRanking(); if (tab === 'trade') this.fetchTradeData(); if (tab === 'admin') this.changeAdminTab('stats'); }, 50); },
     getCharIcon(type) { return type || '🐰'; },
@@ -138,6 +134,7 @@ const appMixin = {
         this.loginWithToken(token);
         return;
       }
+
       try {
         let saved = localStorage.getItem('selfConnectAccounts');
         if (saved) {
@@ -158,11 +155,24 @@ const appMixin = {
     async loginWithToken(userId) {
       this.isAutoLoggingIn = true;
       try {
+        let saved = []; try { saved = JSON.parse(localStorage.getItem('selfConnectAccounts') || '[]'); } catch(e){}
+        const localAcc = saved.find(a => a.user_id === userId);
+        if (localAcc) {
+          // ローカルにあれば「ようこそ」用に先にセット
+          this.autoLoginInfo = { display_name: localAcc.display_name, char_type: localAcc.char_type };
+        } else {
+          this.autoLoginInfo = { display_name: 'ユーザー', char_type: '🐰' };
+        }
+
         const { success, data } = await apiCall('users', 'select', '*', { eq: { column: 'user_id', value: userId } });
         if (!success || data.length === 0) {
           this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "ログインURLが無効です"; return;
         }
+
         const user = data[0];
+        // Supabaseから取得できたら「ようこそ」の表示名を更新
+        this.autoLoginInfo = { display_name: user.display_name, char_type: user.char_type };
+
         if (user.is_blocked) { this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "凍結されています"; return; }
 
         this.consumedToken = userId;
@@ -180,6 +190,7 @@ const appMixin = {
 
     async loginWithSaved(acc) {
       this.isAutoLoggingIn = true;
+      this.autoLoginInfo = acc; // 既存のアカウント情報で「ようこそ」を表示
       try {
         const { success, data } = await apiCall('users', 'select', '*', { eq: { column: 'user_id', value: acc.user_id } });
         if (!success || data.length === 0 || data[0].is_blocked) {
@@ -267,7 +278,10 @@ const appMixin = {
           this.isLoading = false; 
           if (this.isAegisMode) { this.currentNavTab = 'admin'; this.switchNav('admin'); } 
           else { this.currentNavTab = 'home'; this.switchNav('home'); }
+          
+          // ★ 追加: ポーリング関数をここで確実に呼び出す
           this.startPolling();
+          
           if (this.timeUpdater) clearInterval(this.timeUpdater);
           this.timeUpdater = setInterval(() => { this.currentTime = new Date(); }, 1000);
           window.showDebug(`[OK] 🎉 ログイン完了`);
@@ -278,6 +292,13 @@ const appMixin = {
       }
     },
 
+    // ★ 復元: ポーリングタイマー関数と取得関数
+    startPolling() {
+      this.fetchData(false);
+      if (this.pollingInterval) clearInterval(this.pollingInterval);
+      this.pollingInterval = setInterval(() => this.fetchData(false), 6000);
+    },
+    
     async fetchData(showLoading = false) { 
       if ((!this.currentChannelId && !['home','study','admin','play'].includes(this.currentNavTab)) || this.isFetching) return; 
       this.isFetching = true; 
@@ -313,8 +334,6 @@ const appMixin = {
     // すべてSupabase用に切り替えていきます！
     // ----------------------------------------------------
     formatDate(d) { const date = new Date(d); if (isNaN(date)) return ''; const m = date.getMonth() + 1; const day = date.getDate(); const h = date.getHours(); const min = date.getMinutes().toString().padStart(2, '0'); return `${m}/${day} ${h}:${min}`; },
-    
-    // (※他の関数群はとりあえずそのままの状態で大丈夫です)
   },
 
   mounted() {
@@ -329,7 +348,6 @@ const appMixin = {
   }
 };
 
-// ★ アプリの初期化とコンポーネントの登録
 const app = Vue.createApp({
   components: {
     'view-auth': viewAuth,
@@ -346,7 +364,6 @@ const app = Vue.createApp({
   }
 });
 
-// ★ 作成した mixin をアプリ全体に適用し、全コンポーネントでデータを共有可能にする
 app.mixin(appMixin);
 
 app.mount('#app');
