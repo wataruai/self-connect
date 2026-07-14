@@ -13,7 +13,7 @@ import viewTrade from '../components/view_trade.js';
 import viewShop from '../components/view_shop.js';
 import viewAdmin from '../components/view_admin.js';
 import viewModals from '../components/modals.js';
-import aegisMethods from './script_aegis.js';
+import aegisMethods from '../components/script_aegis.js';
 
 // デバッグモニター出力関数
 window.showDebug = function(msg, isError = false) {
