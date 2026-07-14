@@ -1,10 +1,5 @@
 export default {
   template: `
-<!-- ========================================== -->
-<!-- 各種ポップアップ（モーダル）の定義ファイル -->
-<!-- ========================================== -->
-
-<!-- ★ 1. コミュニティ作成・編集モーダル -->
 <div v-if="showCreateChannelModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showCreateChannelModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -29,7 +24,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 2. ユーザープロフィール表示モーダル -->
 <div v-if="showUserProfileModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[70] p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full animate-pop-in relative text-center">
     <button @click="showUserProfileModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -62,7 +56,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 3. フレンド申請確認モーダル -->
 <div v-if="showFriendRequestModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[70] p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full animate-pop-in relative text-center">
     <button @click="showFriendRequestModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -88,7 +81,6 @@ export default {
       <button @click="acceptRequestPopup" :disabled="isSending" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl shadow transition disabled:opacity-50">
         <i v-if="isSending" class="fa-solid fa-spinner fa-spin mr-2"></i><span v-else>承認する</span>
       </button>
-      <!-- ★ お断りボタンを赤色に変更 -->
       <button @click="rejectRequestPopup" :disabled="isSending" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow transition disabled:opacity-50">
         <i v-if="isSending" class="fa-solid fa-spinner fa-spin mr-2"></i><span v-else>お断り</span>
       </button>
@@ -96,7 +88,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 4. ID検索（フレンド追加）モーダル -->
 <div v-if="showAddFriendModal" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showAddFriendModal = false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -119,7 +110,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 5. グループDM作成モーダル -->
 <div v-if="showGroupDmModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showGroupDmModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -137,7 +127,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 6. 課題送信・修正モーダル -->
 <div v-if="showSendTaskModal || showEditTaskModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showSendTaskModal=false; showEditTaskModal=false;" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -170,7 +159,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 7. クイズ作成モーダル -->
 <div v-if="showQuizModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showQuizModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -195,7 +183,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 8. 画像アップロード設定モーダル -->
 <div v-if="showImageUploadModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative">
     <button @click="showImageUploadModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -218,7 +205,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 9. メッセージ全消去確認モーダル -->
 <div v-if="showDeleteAllModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl p-8 max-w-sm w-full animate-pop-in text-center">
     <div class="text-red-500 text-5xl mb-4"><i class="fa-solid fa-skull-crossbones"></i></div>
@@ -232,7 +218,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 10. 設定モーダル（天気の位置情報取得を追加） -->
 <div v-if="showSettingsModal" class="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[80] p-4">
   <div class="bg-white rounded-3xl p-0 w-full max-w-lg animate-pop-in relative overflow-hidden flex flex-col max-h-[90vh]">
     <div class="bg-slate-50 border-b p-5 md:p-6 shrink-0 relative">
@@ -288,7 +273,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 11. 通帳モーダル -->
 <div v-if="showPassbookModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[90] p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full animate-pop-in relative flex flex-col max-h-[85vh]">
     <button @click="showPassbookModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -319,7 +303,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 12. 管理者用 ユーザー編集モーダル -->
 <div v-if="showAdminUserModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[80] p-4">
   <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full animate-pop-in relative max-h-[90vh] overflow-y-auto">
     <button @click="showAdminUserModal=false" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
@@ -396,7 +379,6 @@ export default {
   </div>
 </div>
 
-<!-- ★ 13. Aegis OVERRIDE パネル (一括株操作モーダル) -->
 <div v-if="showAegisStockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[90] p-4">
   <div class="bg-slate-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full animate-pop-in relative border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
     <button @click="showAegisStockModal=false" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -452,5 +434,6 @@ export default {
       </button>
     </div>
   </div>
-</div>  `
+</div>
+  `
 };
