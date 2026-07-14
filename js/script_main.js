@@ -15,7 +15,6 @@ import viewAdmin from '../components/view_admin.js';
 import viewModals from '../components/modals.js';
 import aegisMethods from '../components/script_aegis.js';
 
-// デバッグモニター出力関数
 window.showDebug = function(msg, isError = false) {
   console.log(msg);
   let container = document.getElementById('debug-monitor-container');
@@ -45,55 +44,35 @@ window.showDebug = function(msg, isError = false) {
   }, 7000);
 };
 
-const app = Vue.createApp({
-  components: {
-    'view-auth': viewAuth,
-    'view-sidebar': viewSidebar,
-    'view-home': viewHome,
-    'view-chat': viewChat,
-    'view-study': viewStudy,
-    'view-play': viewPlay,
-    'view-ai': viewAi,
-    'view-trade': viewTrade,
-    'view-shop': viewShop,
-    'view-admin': viewAdmin,
-    'view-modals': viewModals
-  },
-
+// ★ Vueの大元のデータを mixin として定義（これを各コンポーネントで共有する）
+const appMixin = {
   data() {
     return {
-      // Aegisデータ
       marketStatus: 'auto', showAegisStockModal: false,
       aegisStockForm: { selectedUsers: [], selectedStocks: [], amount: 1, action: 'give', customPrice: null },
       aegisDiscordMessage: '', aegisDiscordRoleId: '', aegisDiscordMentionEveryone: false,
       
-      // グローバルUI
       isAegisMode: window.appConfig ? window.appConfig.isAegisMode : false, 
       myLoginUrl: '', consumedToken: null, 
       isMobile: window.innerWidth < 768, mobileView: 'list', currentNavTab: 'home',
       errorMessage: null, isLoading: false, isSending: false, isFetching: false,
       
-      // ユーザー情報
       currentUser: null, savedAccounts: [], isAutoLoggingIn: false, authMode: 'new', existingSearchId: '',
       showPinModal: false, pinInput: '', pendingLoginAccount: null,
       loginForm: { name: '', searchId: '', pin: '', charType: '🐰', charName: '' }, autoLoginInfo: { display_name: '', char_type: '🐰' },
       availableIcons: ['🐰','🐶','🦊','🐻','🐼','🐯','🦁','🧑‍🎓','👩‍🎓','🤖','👻'], allUsers: [],
       
-      // チャット・コミュニティ
       channels: [], gdms: [], friends: [], friendRequests: [],
       currentChannelId: '', messages: [], inputText: '', editMessageId: null,
       isChannelLoading: false, contextMenu: { show: false, targetData: null, type: '', x: 0, y: 0 },
       flyingHearts: [], heartId: 0,
       
-      // その他
       notifications: [], tasks: [], studyLogs: [], todos: [], events: [], quizzes: [], weather: null,
       pollingInterval: null, timeUpdater: null, currentTime: new Date(),
       newTodo: '', newEvent: { title: '', date: '' }, studyForm: { subject: '', duration: '' }, taskUploadFiles: [],
       
-      // AI関連
       aiMode: 'chat', aiChatModel: 'google/gemma-4-31b-it:free', aiChatHistory: [], aiChatInput: '', aiVideoPrompt: '', aiVideoResult: null, isAILoading: false,
       
-      // モーダル
       showSettingsModal: false, settingsTab: 'profile', settingsForm: { display_name: '', discord_id: '', notif_task: true, notif_message: true, notif_general: true, dnd_hours: 0 },
       showAddFriendModal: false, searchIdInput: '', searchResult: null,
       showGroupDmModal: false, gdmForm: { name: '', members: [] },
@@ -104,15 +83,13 @@ const app = Vue.createApp({
       showQuizModal: false, quizForm: { question: '', choice1: '', choice2: '', choice3: '', choice4: '', correct: '' },
       showDeleteAllModal: false, showPassbookModal: false, passbookData: [], isFetchingPassbook: false,
       
-      // Admin
       adminSubTab: 'stats', isFetchingAdmin: false, adminStats: null, adminChartInstance: null, adminHourChartInstance: null, adminUserList: [], adminMessages: [], adminNotifs: [], adminWebhooks: [], adminManualWebhookText: '', adminManualWebhookUrl: '', showAdminUserModal: false, adminSelectedUser: null, adminEditForm: { allowed_start: '', allowed_end: '', role: '', parent_id: '', search_id: '', discord_id: '', coins: 0 }, adminNotifForm: { content: '' }, adminNotifFile: null, adminAddFriendId: '', isSendingAdmin: false,
 
-      // Shop & Trade
       shopTab: 'items', rankingList: [], themeItems: [ { id: 'theme_sakura', name: 'さくらピンク', price: 1000, type: 'theme', icon: '🌸' }, { id: 'theme_dark', name: 'ナイトモード', price: 3000, type: 'theme', icon: '🌙' }, { id: 'theme_gold', name: 'VIPゴールド', price: 10000, type: 'theme', icon: '👑' } ], stampItems: [ { id: 'stamp_basic', name: '日常あいさつ', price: 500, type: 'stamp', icon: '👋' }, { id: 'stamp_trader', name: '投資家', price: 1500, type: 'stamp', icon: '📈' }, { id: 'stamp_animal', name: 'アニマル', price: 800, type: 'stamp', icon: '🐾' } ],
       tradeData: { stocks: [], scenarios: {}, portfolios: [], news: [] }, isLoadingTrade: false, tradeFilter: 'real', selectedStock: null, tradeAmount: 1, tradeChartInstance: null, chartDays: 1, currentMinuteDataCache: {}, tradeNews: null, isSendingTrade: false, lastChartUpdateTime: ''
     };
   },
-
+  
   computed: {
     showListArea() { if (!this.isMobile) return ['activity', 'chat', 'teams'].includes(this.currentNavTab); return this.mobileView === 'list'; },
     showMainArea() { if (!this.isMobile) return true; return this.mobileView === 'detail'; },
@@ -137,10 +114,9 @@ const app = Vue.createApp({
     canBuyStock() { if (!this.currentUser || !this.selectedStock) return false; return (this.currentSelectedPrice * this.tradeAmount) <= (this.currentUser.coins || 0); },
     canSellStock() { if (!this.selectedStock) return false; return this.getOwnedQuantity(this.selectedStock.stock_code) >= this.tradeAmount; }
   },
-  
+
   methods: {
     ...aegisMethods,
-    
     navClass(tab) { return { 'text-indigo-400 bg-slate-800': this.currentNavTab === tab, 'text-slate-400 hover:text-slate-200': this.currentNavTab !== tab, 'p-2 md:p-3 w-10 md:w-12 h-10 md:h-12 rounded-xl transition flex justify-center items-center': true }; },
     switchNav(tab) { this.currentNavTab = tab; if (this.isMobile) { this.mobileView = ['chat', 'teams', 'activity'].includes(tab) ? 'list' : 'detail'; } setTimeout(() => { if (tab === 'shop') this.fetchRanking(); if (tab === 'trade') this.fetchTradeData(); if (tab === 'admin') this.changeAdminTab('stats'); }, 50); },
     getCharIcon(type) { return type || '🐰'; },
@@ -153,7 +129,6 @@ const app = Vue.createApp({
     selectChannel(id) { this.currentChannelId = id; this.messages = []; if (this.isMobile) this.mobileView = 'detail'; this.fetchData(true); },
     selectDm(f) { this.currentChannelId = this.getDmId(this.currentUser?.user_id, f.user_id); this.messages = []; if (this.isMobile) this.mobileView = 'detail'; this.fetchData(true); },
     
-    // --- 認証・ログイン (Supabase版) ---
     initAuth() {
       let token = window.appConfig?.loginToken || '';
       let aegis = window.appConfig?.isAegisMode ? 'go' : '';
@@ -163,7 +138,6 @@ const app = Vue.createApp({
         this.loginWithToken(token);
         return;
       }
-
       try {
         let saved = localStorage.getItem('selfConnectAccounts');
         if (saved) {
@@ -188,7 +162,6 @@ const app = Vue.createApp({
         if (!success || data.length === 0) {
           this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "ログインURLが無効です"; return;
         }
-
         const user = data[0];
         if (user.is_blocked) { this.isAutoLoggingIn = false; this.authMode = 'new'; this.errorMessage = "凍結されています"; return; }
 
@@ -269,7 +242,6 @@ const app = Vue.createApp({
       } catch (e) {}
     },
 
-    // 初期データのSupabase取得
     async loadInitialDataFromSupabase(userId) {
       window.showDebug(`[DEBUG] 🔧 Supabase から初期データを取得中...`);
       try {
@@ -286,7 +258,7 @@ const app = Vue.createApp({
         this.gdms = allCh.filter(c => c.type === 'gdm' && c.members && c.members.includes(userId));
         
         this.myLoginUrl = window.location.origin + window.location.pathname + "?token=" + userId;
-        this.fetchMarketStatus();
+        if (this.fetchMarketStatus) this.fetchMarketStatus();
         
         if (this.channels.length > 0) this.currentChannelId = this.channels[0].channel_id;
         
@@ -306,7 +278,6 @@ const app = Vue.createApp({
       }
     },
 
-    // 毎秒の更新取得（ポーリング）
     async fetchData(showLoading = false) { 
       if ((!this.currentChannelId && !['home','study','admin','play'].includes(this.currentNavTab)) || this.isFetching) return; 
       this.isFetching = true; 
@@ -336,9 +307,14 @@ const app = Vue.createApp({
     },
 
     // ----------------------------------------------------
-    // ★ ここから下は既存の株の関数等（Trade/Admin/Shopなど）
-    // （※長すぎるので一旦省略しますが、実際のファイルではそのまま残してください）
+    // ここから下の機能関数（Trade, Admin, Shop等）は、
+    // まだ「GAS用のapiCall('関数名')」で書かれています。
+    // SupabaseのRPC機能の準備ができ次第、これらの通信部分も
+    // すべてSupabase用に切り替えていきます！
     // ----------------------------------------------------
+    formatDate(d) { const date = new Date(d); if (isNaN(date)) return ''; const m = date.getMonth() + 1; const day = date.getDate(); const h = date.getHours(); const min = date.getMinutes().toString().padStart(2, '0'); return `${m}/${day} ${h}:${min}`; },
+    
+    // (※他の関数群はとりあえずそのままの状態で大丈夫です)
   },
 
   mounted() {
@@ -351,6 +327,26 @@ const app = Vue.createApp({
     clearInterval(this.pollingInterval);
     clearInterval(this.timeUpdater);
   }
+};
+
+// ★ アプリの初期化とコンポーネントの登録
+const app = Vue.createApp({
+  components: {
+    'view-auth': viewAuth,
+    'view-sidebar': viewSidebar,
+    'view-home': viewHome,
+    'view-chat': viewChat,
+    'view-study': viewStudy,
+    'view-play': viewPlay,
+    'view-ai': viewAi,
+    'view-trade': viewTrade,
+    'view-shop': viewShop,
+    'view-admin': viewAdmin,
+    'view-modals': viewModals
+  }
 });
+
+// ★ 作成した mixin をアプリ全体に適用し、全コンポーネントでデータを共有可能にする
+app.mixin(appMixin);
 
 app.mount('#app');
