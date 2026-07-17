@@ -632,4 +632,13 @@ const app = Vue.createApp({
 
 app.mixin(appMixin);
 
+// ★ ホワイトアウト防御機能（エラーキャッチャー）を復活
+app.config.errorHandler = function(err, instance, info) {
+  console.error("Vue Runtime Error:", err, info);
+  var d = document.createElement('div');
+  d.style.cssText = "position:fixed; top:0; left:0; right:0; background:#ef4444; color:white; padding:15px; z-index:999999; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.1);";
+  d.innerHTML = "⚠️ システムエラー発生 (ホワイトアウト防御): " + err.message + "<br><span style='font-size:10px'>" + info + "</span><br><button onclick='this.parentElement.remove()' style='margin-top:10px; padding:4px 8px; background:white; color:#ef4444; border-radius:4px; font-size:12px; cursor:pointer;'>閉じる</button>";
+  document.body.appendChild(d);
+};
+
 app.mount('#app');
